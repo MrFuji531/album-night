@@ -101,7 +101,7 @@ export default function AwardReveal({ awards, onComplete }: AwardRevealProps) {
     const nextTimer = setTimeout(() => {
       setShowValue(false)
       setCurrentIndex(prev => prev + 1)
-    }, 6000)
+    }, 10000)
 
     return () => {
       clearTimeout(showTimer)
