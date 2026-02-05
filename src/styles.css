@@ -617,7 +617,7 @@ body {
   padding: 16px 24px; /* smaller */
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 /* Player page specific */

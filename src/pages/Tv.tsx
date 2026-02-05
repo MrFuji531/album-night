@@ -121,6 +121,17 @@ export default function Tv() {
     return awardList
   }, [participants, scores, songs])
 
+      const albumAvg = useMemo(() => {
+      const data = calculateAwards(participants, scores, songs)
+      return data.albumAvg ?? 0
+    }, [participants, scores, songs])
+
+    const personAverages = useMemo(() => {
+      const data = calculateAwards(participants, scores, songs)
+      return data.personAverages
+    }, [participants, scores])
+
+
   /* ------------------ AUDIO ------------------ */
   useEffect(() => {
     preloadCommon()
@@ -420,68 +431,109 @@ export default function Tv() {
                   </div>
                 </motion.div>
               )}
+{/* REVEALING */}
+{session.status === 'revealing' && (
+  <motion.div
+    key="revealing"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    style={{
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 14,
+      overflow: 'hidden'
+    }}
+  >
+    {/* Top: track + title */}
+    <div style={{ flex: '0 0 auto' }} className="text-center">
+      <div className="pill" style={{ marginBottom: 10 }}>
+        Track {songIndex + 1} of {songs.length}
+      </div>
+      <div className="h1" style={{ margin: 0 }}>
+        {currentSong?.title ?? ''}
+      </div>
+      {revealStage === 'countdown' && (
+        <div className="h2" style={{ color: 'var(--gold)', marginTop: 10 }}>
+          Scores locked in…
+        </div>
+      )}
+    </div>
 
-              {/* REVEALING */}
-              {session.status === 'revealing' && (
-                <motion.div
-                  key="revealing"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  style={{
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 10,
-                    overflow: 'hidden'
-                  }}
-                >
-                  <div className="pill">
-                    Track {songIndex + 1} of {songs.length}
-                  </div>
+    {(revealStage === 'rising' || revealStage === 'final') && (
+      <>
+        {/* Row 1: Avatars - always visible */}
+        <div style={{ flex: '0 0 auto' }}>
+          <div
+            className="grid-4"
+            style={{
+              maxWidth: 1500,
+              margin: '0 auto',
+              gap: 16
+            }}
+          >
+            {participants.map(p => (
+              <div key={p.participant_id} className="card-inner text-center" style={{ padding: 12 }}>
+                <Avatar
+                  participantId={p.participant_id}
+                  name={p.name}
+                  avatarUrl={p.avatar_url}
+                  size="lg"
+                  glow
+                />
+                <div style={{ marginTop: 8, fontWeight: 700 }}>{p.name}</div>
+                <div style={{ marginTop: 6 }}>
+                  <span className="pill pill-success">✓ Locked</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
-                  <div className="h1" style={{ margin: 0 }}>
-                    {currentSong?.title ?? ''}
-                  </div>
+        {/* Row 2: Bars - gets most height */}
+        <div
+          style={{
+            flex: '1 1 auto',
+            minHeight: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden'
+          }}
+        >
+          <div style={{ width: '100%', maxWidth: 1500 }}>
+            <ScoreReveal
+              key={`reveal-${songIndex}`}
+              participants={participants}
+              scoreMap={scoreMap}
+              startReveal={revealStage === 'rising'}
+              onTick={handleTick}
+              onComplete={handleRevealComplete}
+            />
+          </div>
+        </div>
 
-                  {revealStage === 'countdown' && (
-                    <div className="h2" style={{ color: 'var(--gold)' }}>
-                      Scores locked in…
-                    </div>
-                  )}
+        {/* Row 3: Average - dedicated area */}
+        <div style={{ flex: '0 0 auto' }} className="text-center">
+          <AverageFlip
+            value={averageFlipping ? liveAverage : songAvg}
+            isFlipping={averageFlipping}
+          />
+        </div>
 
-                  {(revealStage === 'rising' || revealStage === 'final') && (
-                    <>
-                      {/* ScoreReveal must fit: keep it from pushing average off */}
-                      <div style={{ width: '100%', maxWidth: 1500, flex: '1 1 auto', minHeight: 0 }}>
-                        <ScoreReveal
-                          key={`reveal-${songIndex}`}
-                          participants={participants}
-                          scoreMap={scoreMap}
-                          startReveal={revealStage === 'rising'}
-                          onTick={handleTick}
-                          onComplete={handleRevealComplete}
-                        />
-                      </div>
+        {revealStage === 'final' && (
+          <div style={{ flex: '0 0 auto' }} className="text-center">
+            <div className="pill" style={{ fontSize: '1rem', padding: '10px 18px' }}>
+              Admin: Press “Next Song” to continue
+            </div>
+          </div>
+        )}
+      </>
+    )}
+  </motion.div>
+)}
 
-                      {/* Average always visible near bottom */}
-                      <div style={{ flex: '0 0 auto' }}>
-                        <AverageFlip
-                          value={averageFlipping ? liveAverage : songAvg}
-                          isFlipping={averageFlipping}
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {revealStage === 'final' && (
-                    <div style={{ marginTop: 6 }} className="pill">
-                      Admin: Press “Next Song” to continue
-                    </div>
-                  )}
-                </motion.div>
-              )}
 
               {/* RESULTS WAIT */}
               {session.status === 'results' && (
@@ -512,45 +564,88 @@ export default function Tv() {
                 </motion.div>
               )}
 
-              {/* FINAL REVEAL */}
-              {session.status === 'final_reveal' && (
-                <motion.div
-                  key="final_reveal"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  style={{ height: '100%', overflow: 'hidden' }}
-                >
-                  {!awardRevealComplete ? (
-                    <AwardReveal
-                      awards={awards}
-                      onComplete={handleAwardsComplete}
-                    />
-                  ) : (
-                    <div
-                      className="text-center"
-                      style={{
-                        height: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        gap: 14
-                      }}
-                    >
-                      <div className="h1" style={{ color: 'var(--gold)' }}>
-                        🎉 That’s a wrap!
-                      </div>
-                      <div className="h2">
-                        {session.title}
-                      </div>
-                      <div className="pill" style={{ fontSize: '1rem', padding: '12px 24px' }}>
-                        Admin: Press “Complete Session” to finish
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              )}
+{/* FINAL REVEAL */}
+{session.status === 'final_reveal' && (
+  <motion.div
+    key="final_reveal"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    style={{ height: '100%', overflow: 'hidden' }}
+  >
+    {!awardRevealComplete ? (
+      <div
+        style={{
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16
+        }}
+      >
+        {/* Header */}
+        <div className="text-center" style={{ flex: '0 0 auto' }}>
+          <div className="h1" style={{ color: 'var(--gold)', margin: 0 }}>FINAL RESULTS</div>
+          <div className="pill" style={{ marginTop: 10 }}>
+            Album Average: {albumAvg ? albumAvg.toFixed(2) : '—'}
+          </div>
+        </div>
+
+        {/* Leaderboard row */}
+        <div style={{ flex: '0 0 auto' }}>
+          <div className="grid-4" style={{ maxWidth: 1500, margin: '0 auto', gap: 16 }}>
+            {participants.map(p => (
+              <div key={p.participant_id} className="card text-center" style={{ padding: 18 }}>
+                <Avatar
+                  participantId={p.participant_id}
+                  name={p.name}
+                  avatarUrl={p.avatar_url}
+                  size="lg"
+                  glow
+                />
+                <div style={{ marginTop: 10, fontWeight: 800, fontSize: '1.25rem' }}>{p.name}</div>
+                <div style={{ marginTop: 10 }} className="score-medium">
+                  {(personAverages?.[p.participant_id] ?? 0).toFixed(2)}
+                </div>
+                <div style={{ opacity: 0.65, marginTop: 2 }}>average</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Awards reveal takes remaining space */}
+        <div style={{ flex: '1 1 auto', minHeight: 0, overflow: 'hidden' }}>
+          <AwardReveal awards={awards} onComplete={handleAwardsComplete} />
+        </div>
+
+        {/* Footer prompt */}
+        <div className="text-center" style={{ flex: '0 0 auto' }}>
+          <div className="pill" style={{ fontSize: '1rem', padding: '10px 18px' }}>
+            Admin: Press “Complete Session” when done
+          </div>
+        </div>
+      </div>
+    ) : (
+      <div
+        className="text-center"
+        style={{
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 14
+        }}
+      >
+        <div className="h1" style={{ color: 'var(--gold)' }}>🎉 That’s a wrap!</div>
+        <div className="h2">{session.title}</div>
+        <div className="pill" style={{ fontSize: '1rem', padding: '12px 24px' }}>
+          Admin: Press “Complete Session” to finish
+        </div>
+      </div>
+    )}
+  </motion.div>
+)}
+
 
               {/* COMPLETE */}
               {session.status === 'complete' && (

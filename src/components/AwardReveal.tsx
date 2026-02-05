@@ -69,8 +69,17 @@ export default function AwardReveal({ awards, onComplete }: AwardRevealProps) {
 
   const currentAward = currentIndex >= 0 && currentIndex < awards.length ? awards[currentIndex] : null
 
-  return (
-    <div style={{ minHeight: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+return (
+  <div
+    style={{
+      height: '100%',
+      width: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden'
+    }}
+  >
       <AnimatePresence mode="wait">
         {currentAward && (
           <motion.div
@@ -80,7 +89,7 @@ export default function AwardReveal({ awards, onComplete }: AwardRevealProps) {
             exit={{ opacity: 0, scale: 0.8, y: -50 }}
             transition={{ duration: 0.5 }}
             className="text-center"
-            style={{ maxWidth: 600 }}
+            style={{ maxWidth: 900, padding: 24 }}
           >
             {/* Award icon */}
             <motion.div
