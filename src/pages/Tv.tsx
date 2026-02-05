@@ -95,6 +95,7 @@ export default function Tv() {
       song?: Song
     }> = []
 
+    // Award 1: The Stan (highest average rater)
     if (data.stan) {
       awardList.push({
         id: 'stan',
@@ -106,6 +107,7 @@ export default function Tv() {
       })
     }
 
+    // Award 2: The Hater (lowest average rater)
     if (data.hater) {
       awardList.push({
         id: 'hater',
@@ -117,6 +119,30 @@ export default function Tv() {
       })
     }
 
+    // Award 3: Best Song (highest rated song)
+    if (data.highestRated) {
+      awardList.push({
+        id: 'highest',
+        title: 'BEST SONG',
+        subtitle: 'Highest rated track',
+        icon: '🔥',
+        value: data.highestRated.avg,
+        song: data.highestRated.song
+      })
+    }
+
+    // Award 4: Most Divisive (biggest spread in scores)
+    if (data.mostDivisive) {
+      awardList.push({
+        id: 'divisive',
+        title: 'MOST DIVISIVE',
+        subtitle: 'Biggest disagreement',
+        icon: '⚡',
+        value: `±${data.mostDivisive.spread}`,
+        song: data.mostDivisive.song
+      })
+    }
+
     return awardList
   }, [participants, scores, songs])
 
@@ -125,10 +151,10 @@ export default function Tv() {
     return data.albumAvg ?? 0
   }, [participants, scores, songs])
 
-  const personAverages = useMemo(() => {
-    const data = calculateAwards(participants, scores, songs)
-    return data.personAverages
-  }, [participants, scores])
+  // const personAverages = useMemo(() => {
+  //   const data = calculateAwards(participants, scores, songs)
+  //   return data.personAverages
+  // }, [participants, scores])
 
   /* ------------------ AUDIO ------------------ */
   useEffect(() => {
@@ -337,7 +363,7 @@ export default function Tv() {
 
                   {allJoined && (
                     <div style={{ marginTop: 24 }} className="pill pill-success">
-                      ✓ All joined! Admin can start the album
+                      ✓ All joined! Let's begin, ahhhh I'm nervous
                     </div>
                   )}
                 </div>
@@ -470,7 +496,7 @@ export default function Tv() {
                   {revealStage === 'final' && (
                     <div style={{ flex: '0 0 auto', textAlign: 'center', paddingTop: 12 }}>
                       <div className="pill" style={{ fontSize: '1rem', padding: '10px 20px' }}>
-                        Admin: Press "Next Song" to continue
+                        Onto the next one!
                       </div>
                     </div>
                   )}
@@ -497,18 +523,18 @@ export default function Tv() {
               className="text-center"
             >
               <div className="h1" style={{ color: 'var(--gold)' }}>
-                All Songs Complete!
+                Don't worry Lee we're now done, the pain is over
               </div>
               <div className="h2">
                 Ready for the final results?
               </div>
               <div className="pill" style={{ fontSize: '1.25rem', padding: '14px 28px' }}>
-                Admin: Press "Show Awards" to reveal
+                Click show Awards pls
               </div>
             </motion.div>
           )}
 
-          {/* FINAL REVEAL */}
+          {/* FINAL REVEAL - Full screen awards */}
           {session.status === 'final_reveal' && (
             <motion.div
               key="final_reveal"
@@ -522,52 +548,12 @@ export default function Tv() {
                   style={{
                     height: '100%',
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: 20
+                    flexDirection: 'column'
                   }}
                 >
-                  {/* Header */}
-                  <div className="text-center" style={{ flex: '0 0 auto' }}>
-                    <div className="h1" style={{ color: 'var(--gold)', margin: 0, fontSize: '2.5rem' }}>
-                      FINAL RESULTS
-                    </div>
-                    <div className="pill" style={{ marginTop: 12, fontSize: '1.25rem', padding: '10px 20px' }}>
-                      Album Average: {albumAvg ? albumAvg.toFixed(2) : '—'}
-                    </div>
-                  </div>
-
-                  {/* Leaderboard row */}
-                  <div style={{ flex: '0 0 auto' }}>
-                    <div className="grid-4" style={{ maxWidth: 1400, margin: '0 auto', gap: 24 }}>
-                      {participants.map(p => (
-                        <div key={p.participant_id} className="card text-center" style={{ padding: 24 }}>
-                          <Avatar
-                            participantId={p.participant_id}
-                            name={p.name}
-                            avatarUrl={p.avatar_url}
-                            size="lg"
-                            glow
-                          />
-                          <div style={{ marginTop: 12, fontWeight: 800, fontSize: '1.5rem' }}>{p.name}</div>
-                          <div style={{ marginTop: 12 }} className="score-medium">
-                            {(personAverages?.[p.participant_id] ?? 0).toFixed(2)}
-                          </div>
-                          <div style={{ opacity: 0.65, marginTop: 4 }}>average</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Awards reveal takes remaining space */}
+                  {/* Awards take the FULL screen */}
                   <div style={{ flex: '1 1 auto', minHeight: 0, overflow: 'hidden' }}>
                     <AwardReveal awards={awards} onComplete={handleAwardsComplete} />
-                  </div>
-
-                  {/* Footer prompt */}
-                  <div className="text-center" style={{ flex: '0 0 auto' }}>
-                    <div className="pill" style={{ fontSize: '1rem', padding: '10px 20px' }}>
-                      Admin: Press "Complete Session" when done
-                    </div>
                   </div>
                 </div>
               ) : (
@@ -579,13 +565,24 @@ export default function Tv() {
                     flexDirection: 'column',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    gap: 24
+                    gap: 32
                   }}
                 >
-                  <div className="h1" style={{ color: 'var(--gold)' }}>🎉 That's a wrap!</div>
-                  <div className="h2">{session.title}</div>
-                  <div className="pill" style={{ fontSize: '1.25rem', padding: '14px 28px' }}>
-                    Admin: Press "Complete Session" to finish
+                  <div style={{ fontSize: '6rem', marginBottom: 16 }}>🎉</div>
+                  <div style={{ 
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '4rem',
+                    color: 'var(--gold)',
+                    textTransform: 'uppercase'
+                  }}>
+                    That's all friends. Marhabar
+                  </div>
+                  <div className="h2" style={{ fontSize: '2rem' }}>{session.title}</div>
+                  <div className="pill" style={{ fontSize: '1.5rem', padding: '16px 32px', marginTop: 24 }}>
+                    Album Average: {albumAvg ? albumAvg.toFixed(2) : '—'}
+                  </div>
+                  <div className="pill" style={{ fontSize: '1.25rem', padding: '14px 28px', marginTop: 16 }}>
+                    Jimothy please click end
                   </div>
                 </div>
               )}
@@ -609,7 +606,7 @@ export default function Tv() {
               }}
             >
               <div className="h1" style={{ color: 'var(--gold)' }}>
-                Thanks for listening!
+                Thanks for rating! Future me, did you like it as much as you hoped?? I'm very hyped right now and praying you're not dissapointed 
               </div>
               <div className="h2">
                 {session.title}

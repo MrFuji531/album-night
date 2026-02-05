@@ -44,22 +44,29 @@ export default function AwardReveal({ awards, onComplete }: AwardRevealProps) {
       setShowValue(true)
       const award = awards[currentIndex]
       
+      // Play appropriate sound and confetti based on award type
       if (award.id === 'stan') {
         goldShower()
         playAwardReaction('stan')
       } else if (award.id === 'hater') {
         celebrate()
         playAwardReaction('hater')
+      } else if (award.id === 'highest') {
+        goldShower()
+        playAwardReaction('stan') // Use stan sound for best song
+      } else if (award.id === 'divisive') {
+        celebrate()
+        playAwardReaction('hater') // Use hater sound for divisive
       } else {
         celebrate()
       }
-    }, 2000)
+    }, 2500)
 
     // Move to next award
     const nextTimer = setTimeout(() => {
       setShowValue(false)
       setCurrentIndex(prev => prev + 1)
-    }, 5000)
+    }, 6000)
 
     return () => {
       clearTimeout(showTimer)
@@ -69,17 +76,17 @@ export default function AwardReveal({ awards, onComplete }: AwardRevealProps) {
 
   const currentAward = currentIndex >= 0 && currentIndex < awards.length ? awards[currentIndex] : null
 
-return (
-  <div
-    style={{
-      height: '100%',
-      width: '100%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      overflow: 'hidden'
-    }}
-  >
+  return (
+    <div
+      style={{
+        height: '100%',
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden'
+      }}
+    >
       <AnimatePresence mode="wait">
         {currentAward && (
           <motion.div
@@ -89,25 +96,35 @@ return (
             exit={{ opacity: 0, scale: 0.8, y: -50 }}
             transition={{ duration: 0.5 }}
             className="text-center"
-            style={{ maxWidth: 900, padding: 24 }}
+            style={{ 
+              width: '100%',
+              maxWidth: 1400,
+              padding: 48
+            }}
           >
-            {/* Award icon */}
+            {/* Award icon - HUGE */}
             <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
               transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-              style={{ fontSize: '5rem', marginBottom: 16 }}
+              style={{ fontSize: '8rem', marginBottom: 24 }}
             >
               {currentAward.icon}
             </motion.div>
 
-            {/* Award title */}
+            {/* Award title - HUGE */}
             <motion.h2
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="h1"
-              style={{ color: 'var(--gold)', marginBottom: 8 }}
+              transition={{ delay: 0.3 }}
+              style={{ 
+                fontFamily: 'var(--font-display)',
+                fontSize: '5rem',
+                color: 'var(--gold)',
+                marginBottom: 16,
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em'
+              }}
             >
               {currentAward.title}
             </motion.h2>
@@ -115,22 +132,22 @@ return (
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.7 }}
-              transition={{ delay: 0.4 }}
-              style={{ fontSize: '1.25rem', marginBottom: 24 }}
+              transition={{ delay: 0.5 }}
+              style={{ fontSize: '1.5rem', marginBottom: 40 }}
             >
               {currentAward.subtitle}
             </motion.p>
 
-            {/* Winner reveal */}
+            {/* Winner reveal - BIG */}
             <AnimatePresence>
               {showValue && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.5, y: 30 }}
+                  initial={{ opacity: 0, scale: 0.5, y: 50 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                 >
                   {currentAward.participant ? (
-                    <div className="flex flex-col items-center gap-md">
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
                       <Avatar
                         participantId={currentAward.participant.participant_id}
                         name={currentAward.participant.name}
@@ -138,10 +155,15 @@ return (
                         size="xl"
                         glow
                       />
-                      <div className="h2" style={{ color: 'var(--text-primary)' }}>
+                      <div style={{ 
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '4rem',
+                        color: 'var(--text-primary)',
+                        textTransform: 'uppercase'
+                      }}>
                         {currentAward.participant.name}
                       </div>
-                      <div className="pill pill-success" style={{ fontSize: '1rem', padding: '10px 20px' }}>
+                      <div className="pill pill-success" style={{ fontSize: '1.5rem', padding: '16px 32px' }}>
                         {typeof currentAward.value === 'number' 
                           ? `Average: ${currentAward.value.toFixed(2)}`
                           : currentAward.value
@@ -149,17 +171,30 @@ return (
                       </div>
                     </div>
                   ) : currentAward.song ? (
-                    <div className="card card-gold text-center" style={{ padding: 32 }}>
-                      <div className="h2" style={{ color: 'var(--text-primary)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+                      <div style={{ 
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '3.5rem',
+                        color: 'var(--text-primary)',
+                        textTransform: 'uppercase',
+                        maxWidth: 1000
+                      }}>
                         "{currentAward.song.title}"
                       </div>
-                      <div className="spacer" />
-                      <div className="pill" style={{ fontSize: '1rem' }}>
-                        {currentAward.value}
+                      <div className="pill" style={{ fontSize: '1.5rem', padding: '16px 32px' }}>
+                        {typeof currentAward.value === 'number' 
+                          ? currentAward.value.toFixed(2)
+                          : currentAward.value
+                        }
                       </div>
                     </div>
                   ) : (
-                    <div className="score-display">
+                    <div style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '6rem',
+                      color: 'var(--gold)',
+                      textShadow: '0 0 40px rgba(212, 175, 55, 0.5)'
+                    }}>
                       {typeof currentAward.value === 'number' 
                         ? currentAward.value.toFixed(2)
                         : currentAward.value
@@ -173,9 +208,9 @@ return (
             {/* Progress indicator */}
             <div 
               style={{ 
-                marginTop: 40, 
+                marginTop: 60, 
                 display: 'flex', 
-                gap: 8, 
+                gap: 12, 
                 justifyContent: 'center' 
               }}
             >
@@ -183,8 +218,8 @@ return (
                 <div
                   key={idx}
                   style={{
-                    width: 12,
-                    height: 12,
+                    width: 16,
+                    height: 16,
                     borderRadius: '50%',
                     background: idx <= currentIndex ? 'var(--gold)' : 'rgba(255,255,255,0.2)',
                     transition: 'background 0.3s ease'
