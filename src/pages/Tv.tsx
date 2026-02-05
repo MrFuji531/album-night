@@ -21,9 +21,8 @@ export default function Tv() {
   const { play, preloadCommon, playScoreReaction } = useAudio()
 
   const [revealStage, setRevealStage] = useState<RevealStage>('idle')
-  const [showAverageFlip, setShowAverageFlip] = useState(false)
   const [awardRevealComplete, setAwardRevealComplete] = useState(false)
-  const { unlock } = useAudio() // implement this in hook
+  const audio = useAudio() // implement this in hook
 
   const joinUrl = `${window.location.origin}${window.location.pathname}#/join/${code}`
 
@@ -151,29 +150,14 @@ export default function Tv() {
   }, [session?.status, session?.song_index, play])
 
   useEffect(() => {
-  const handler = () => unlock()
+  const handler = () => audio
   window.addEventListener('keydown', handler, { once: true })
   window.addEventListener('pointerdown', handler, { once: true })
   return () => {
     window.removeEventListener('keydown', handler)
     window.removeEventListener('pointerdown', handler)
   }
-}, [unlock])
-
-  const handleBarsComplete = () => {
-    setRevealStage('average')
-    setTimeout(() => {
-      setShowAverageFlip(true)
-    }, 500)
-  }
-
-  const handleAverageComplete = () => {
-    setRevealStage('final')
-    celebrate()
-    // Play score reaction based on average
-    const rounded = Math.round(songAvg)
-    playScoreReaction(rounded)
-  }
+}, [audio])
 
   const handleTick = (currentScores: Record<string, number>) => {
   const vals = Object.values(currentScores)
@@ -336,7 +320,7 @@ const handleRevealComplete = () => {
               className="text-center"
             >
               <div className="pill" style={{ marginBottom: 24 }}>
-                Track {session.song_index + 1} of {songs.length}
+              Track {(session.song_index ?? 0) + 1} of {songs.length}
               </div>
 
               <motion.div
@@ -399,7 +383,7 @@ const handleRevealComplete = () => {
               className="text-center"
             >
               <div className="pill" style={{ marginBottom: 16 }}>
-                Track {session.song_index + 1}
+              Track {(session.song_index ?? 0) + 1}
               </div>
 
               <div className="h1" style={{ marginBottom: 32 }}>

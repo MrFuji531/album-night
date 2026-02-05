@@ -253,7 +253,7 @@ export default function Play() {
             >
               {/* Song info */}
               <div className="pill" style={{ marginBottom: 16 }}>
-                Track {session.song_index + 1} of {songs.length}
+                Track {(session.song_index ?? 0) + 1} of {songs.length}
               </div>
 
               <div className="h1" style={{ marginBottom: 32, lineHeight: 1.2 }}>

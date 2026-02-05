@@ -119,7 +119,9 @@ export default function Admin() {
     if (!session) return
     setBusy(true)
 
-    const next = session.song_index + 1
+    const songIndex = session.song_index ?? 0
+    const next = songIndex + 1
+
     const done = next >= songs.length
 
     if (done) {
@@ -394,7 +396,7 @@ export default function Admin() {
               </div>
               <div className="flex justify-between" style={{ marginBottom: 8 }}>
                 <span style={{ opacity: 0.7 }}>Song</span>
-                <span className="font-mono">{session.song_index + 1} / {songs.length || '—'}</span>
+                <span className="font-mono">{(session.song_index ?? 0) + 1} / {songs.length || '—'}</span>
               </div>
               <div className="flex justify-between" style={{ marginBottom: 8 }}>
                 <span style={{ opacity: 0.7 }}>Locked</span>
@@ -465,7 +467,7 @@ export default function Admin() {
                   onClick={nextSong}
                   disabled={busy}
                 >
-                  {session.song_index + 1 >= songs.length ? '📊 Go to Results' : '⏭️ Next Song'}
+                {((session.song_index ?? 0) + 1 >= songs.length) ? '📊 Go to Results' : '⏭️ Next Song'}
                 </button>
               )}
 
