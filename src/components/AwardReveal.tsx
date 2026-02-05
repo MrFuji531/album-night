@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Avatar from './Avatar'
 import { useConfetti } from '../hooks/useConfetti'
@@ -24,10 +24,51 @@ export default function AwardReveal({ awards, onComplete }: AwardRevealProps) {
   const [currentIndex, setCurrentIndex] = useState(-1)
   const [showValue, setShowValue] = useState(false)
   const { celebrate, goldShower } = useConfetti()
-  const { play, playAwardReaction } = useAudio()
+  const { play, preload, unlock } = useAudio()
+  
+  // Track if we've preloaded
+  const preloadedRef = useRef(false)
+  
+  // Preload all award sounds on mount
+  useEffect(() => {
+    if (preloadedRef.current) return
+    preloadedRef.current = true
+    
+    // Preload all the award sounds
+    preload('drumroll')
+    preload('award_stan')
+    preload('award_hater')
+    preload('award_highest')
+    preload('award_lowest')
+    preload('award_divisive')
+    preload('fanfare')
+  }, [preload])
+
+  // Ensure audio is unlocked (user must have interacted with TV page already)
+  useEffect(() => {
+    unlock()
+  }, [unlock])
+
+  const playAwardSound = useCallback((awardId: string) => {
+    // Map award IDs to their sound keys
+    const soundMap: Record<string, string> = {
+      'stan': 'award_stan',
+      'hater': 'award_hater', 
+      'highest': 'award_highest',
+      'lowest': 'award_lowest',
+      'divisive': 'award_divisive'
+    }
+    
+    const soundKey = soundMap[awardId]
+    if (soundKey) {
+      play(soundKey as any)
+    }
+  }, [play])
 
   useEffect(() => {
     if (currentIndex >= awards.length) {
+      // Play fanfare at the end
+      play('fanfare')
       onComplete?.()
       return
     }
@@ -38,25 +79,19 @@ export default function AwardReveal({ awards, onComplete }: AwardRevealProps) {
       return () => clearTimeout(timer)
     }
 
-    // Show the award title first
+    // Play drumroll when award title appears
     play('drumroll')
+    
     const showTimer = setTimeout(() => {
       setShowValue(true)
       const award = awards[currentIndex]
       
-      // Play appropriate sound and confetti based on award type
-      if (award.id === 'stan') {
+      // Play the specific award sound
+      playAwardSound(award.id)
+      
+      // Trigger confetti based on award type
+      if (award.id === 'stan' || award.id === 'highest') {
         goldShower()
-        playAwardReaction('stan')
-      } else if (award.id === 'hater') {
-        celebrate()
-        playAwardReaction('hater')
-      } else if (award.id === 'highest') {
-        goldShower()
-        playAwardReaction('highest') // Use stan sound for best song
-      } else if (award.id === 'divisive') {
-        celebrate()
-        playAwardReaction('divisive') // Use hater sound for divisive
       } else {
         celebrate()
       }
@@ -72,7 +107,7 @@ export default function AwardReveal({ awards, onComplete }: AwardRevealProps) {
       clearTimeout(showTimer)
       clearTimeout(nextTimer)
     }
-  }, [currentIndex, awards, play, playAwardReaction, celebrate, goldShower, onComplete])
+  }, [currentIndex, awards, play, playAwardSound, celebrate, goldShower, onComplete])
 
   const currentAward = currentIndex >= 0 && currentIndex < awards.length ? awards[currentIndex] : null
 

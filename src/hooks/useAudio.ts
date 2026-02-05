@@ -28,11 +28,11 @@ const AUDIO_PATHS = {
   score_10: 'audio/scores/score_10.mp3',
 
   // Award reveal sounds
-  award_stan: 'audio/awards/stan.mp3',
-  award_hater: 'audio/awards/hater.mp3',
-  award_highest: 'audio/awards/highest_rated.mp3',
-  award_lowest: 'audio/awards/lowest_rated.mp3',
-  award_divisive: 'audio/awards/most_divisive.mp3',
+  award_stan: 'audio/awards/award_stan.mp3',
+  award_hater: 'audio/awards/award_hater.mp3',
+  award_highest: 'audio/awards/award_highest.mp3',
+  award_lowest: 'audio/awards/award_lowest.mp3',
+  award_divisive: 'audio/awards/award_divisive.mp3',
 
   // UI sounds
   submit: 'audio/ui/submit.mp3',

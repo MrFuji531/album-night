@@ -195,6 +195,18 @@ const ResultsSummary = forwardRef<HTMLDivElement, ResultsSummaryProps>(
               <div style={{ fontSize: 12, fontWeight: 600 }}>{awards.highestRated.song.title}</div>
             </div>
           )}
+           {awards.lowestRated && (
+            <div style={{ 
+              padding: 12, 
+              background: 'rgba(255,255,255,0.05)',
+              borderRadius: 8,
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: 20, marginBottom: 4 }}>⚡</div>
+              <div style={{ fontSize: 11, opacity: 0.7 }}>Lowest Rated</div>
+              <div style={{ fontSize: 12, fontWeight: 600 }}>{awards.lowestRated.song.title}</div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

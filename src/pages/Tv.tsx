@@ -22,7 +22,7 @@ export default function Tv() {
   const { session, participants, songs, scores, loading } = useSessionData(code)
   const { celebrate, fireworks } = useConfetti()
 
-  const { preloadCommon, playScoreReaction, unlock } = useAudio()
+  const { preloadCommon, playScoreReaction, unlock, preload } = useAudio()
 
   const [revealStage, setRevealStage] = useState<RevealStage>('idle')
   const [awardRevealComplete, setAwardRevealComplete] = useState(false)
@@ -131,7 +131,19 @@ export default function Tv() {
       })
     }
 
-    // Award 4: Most Divisive (biggest spread in scores)
+    // Award 4: Worst Song (lowest rated song)
+    if (data.lowestRated) {
+      awardList.push({
+        id: 'lowest',
+        title: 'WORST SONG',
+        subtitle: 'Lowest rated track',
+        icon: '❄️',
+        value: data.lowestRated.avg,
+        song: data.lowestRated.song
+      })
+    }
+
+    // Award 5: Most Divisive (biggest spread in scores)
     if (data.mostDivisive) {
       awardList.push({
         id: 'divisive',
@@ -151,15 +163,18 @@ export default function Tv() {
     return data.albumAvg ?? 0
   }, [participants, scores, songs])
 
-  // const personAverages = useMemo(() => {
-  //   const data = calculateAwards(participants, scores, songs)
-  //   return data.personAverages
-  // }, [participants, scores])
-
   /* ------------------ AUDIO ------------------ */
   useEffect(() => {
     preloadCommon()
-  }, [preloadCommon])
+    // Preload award sounds
+    preload('award_stan')
+    preload('award_hater')
+    preload('award_highest')
+    preload('award_lowest')
+    preload('award_divisive')
+    preload('drumroll')
+    preload('fanfare')
+  }, [preloadCommon, preload])
 
   useEffect(() => {
     const handler = () => unlock()
