@@ -58,7 +58,7 @@ export default function AverageFlip({ value, isFlipping }: AverageFlipProps) {
           className="pill"
           style={{ marginTop: 16 }}
         >
-          {value >= 8 ? '🔥 HEAT' : value >= 6 ? '✨ SOLID' : value >= 4 ? '😐 MEH' : '❄️ COLD'}
+          {value >= 8 ? '🔥 BANGER' : value >= 6 ? '✨ SOLID' : value >= 4 ? '😐 SHMEE SHMA' : '❄️ TEEEEERRIBLE'}
         </motion.div>
       )}
     </motion.div>

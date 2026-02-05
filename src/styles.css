@@ -54,11 +54,6 @@
   padding: 0;
 }
 
-html, body, #root {
-  min-height: 100vh;
-  background: var(--bg-deep);
-}
-
 body {
   font-family: var(--font-body);
   color: var(--text-primary);
@@ -546,27 +541,38 @@ a:hover {
   background: var(--gold);
 }
 
-/* TV-specific styles */
-.tv-layout {
+html, body, #root {
+  height: 100%;
+  width: 100%;
   min-height: 100vh;
+  background: var(--bg-deep);
+}
+
+body {
+  overflow: hidden; /* TV should never scroll */
+}
+
+/* TV-specific styles (override your existing ones) */
+.tv-layout {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .tv-header {
-  padding: 24px 40px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--border-subtle);
+  flex: 0 0 auto;
+  padding: 16px 24px; /* smaller */
 }
 
 .tv-content {
-  flex: 1;
+  flex: 1 1 auto;
+  overflow: hidden;
+  padding: 16px 24px; /* smaller */
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 40px;
 }
 
 /* Player page specific */

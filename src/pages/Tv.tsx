@@ -18,15 +18,22 @@ export default function Tv() {
   const { code = '' } = useParams()
   const { session, participants, songs, scores, loading } = useSessionData(code)
   const { celebrate, fireworks } = useConfetti()
-  const { play, preloadCommon, playScoreReaction } = useAudio()
+
+  // ✅ only call useAudio() ONCE
+  const { preloadCommon, playScoreReaction, unlock } = useAudio()
 
   const [revealStage, setRevealStage] = useState<RevealStage>('idle')
   const [awardRevealComplete, setAwardRevealComplete] = useState(false)
-  const audio = useAudio() // implement this in hook
 
-  const joinUrl = `${window.location.origin}${window.location.pathname}#/join/${code}`
+  const submittedCount = useMemo(() => {
+    if (!session) return 0
+    return scores.filter(s => s.song_index === session.song_index).length
+  }, [scores, session])
 
-  const currentSong = useMemo(() => getCurrentSong(songs, session?.song_index ?? 0), [songs, session?.song_index])
+  const currentSong = useMemo(
+    () => getCurrentSong(songs, session?.song_index ?? 0),
+    [songs, session?.song_index]
+  )
 
   const songScores = useMemo(() => {
     if (!session) return []
@@ -39,7 +46,6 @@ export default function Tv() {
     return m
   }, [songScores])
 
-  const submittedCount = songScores.length
   const songAvg = computeSongAvg(songScores)
   const [averageFlipping, setAverageFlipping] = useState(false)
   const [liveAverage, setLiveAverage] = useState(0)
@@ -125,57 +131,80 @@ export default function Tv() {
     return awardList
   }, [participants, scores, songs])
 
+  // ✅ Scale-to-fit TV so nothing ever scrolls
+  const DESIGN_W = 1920
+  const DESIGN_H = 1080
+  const [scale, setScale] = useState(1)
+
+  useEffect(() => {
+    const onResize = () => {
+      const s = Math.min(window.innerWidth / DESIGN_W, window.innerHeight / DESIGN_H)
+      setScale(s)
+    }
+    onResize()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  // ✅ GitHub Pages-safe join URL (origin + BASE_URL + #/join/:code)
+  const joinUrl = useMemo(() => {
+    const base = import.meta.env.BASE_URL || './'
+    const normalizedBase = base.startsWith('/') ? base : `/${base.replace(/^\.\//, '')}`
+    return `${window.location.origin}${normalizedBase}#/join/${code}`
+  }, [code])
+
   // Preload audio on mount
   useEffect(() => {
     preloadCommon()
   }, [preloadCommon])
+
+  // ✅ Unlock audio after first user gesture (required for TVs/browsers)
+  useEffect(() => {
+    const handler = () => unlock()
+    window.addEventListener('keydown', handler, { once: true })
+    window.addEventListener('pointerdown', handler, { once: true })
+    return () => {
+      window.removeEventListener('keydown', handler)
+      window.removeEventListener('pointerdown', handler)
+    }
+  }, [unlock])
 
   // Handle reveal animation stages
   useEffect(() => {
     if (!session) return
 
     if (session.status === 'revealing') {
-  setRevealStage('countdown')
-  setAverageFlipping(false)
-  setLiveAverage(0)
-  playedAudioRef.current = false
+      setRevealStage('countdown')
+      setAverageFlipping(false)
+      setLiveAverage(0)
+      playedAudioRef.current = false
 
-  const t1 = setTimeout(() => {
-    setRevealStage('rising')
-    setAverageFlipping(true)
-  }, 800)
+      const t1 = setTimeout(() => {
+        setRevealStage('rising')
+        setAverageFlipping(true)
+      }, 800)
 
-  return () => clearTimeout(t1)
-}
-  }, [session?.status, session?.song_index, play])
-
-  useEffect(() => {
-  const handler = () => audio
-  window.addEventListener('keydown', handler, { once: true })
-  window.addEventListener('pointerdown', handler, { once: true })
-  return () => {
-    window.removeEventListener('keydown', handler)
-    window.removeEventListener('pointerdown', handler)
-  }
-}, [audio])
+      return () => clearTimeout(t1)
+    }
+  }, [session?.status, session?.song_index])
 
   const handleTick = (currentScores: Record<string, number>) => {
-  const vals = Object.values(currentScores)
-  const sum = vals.reduce((a, b) => a + b, 0)
-  const avg = sum / (participants.length || 4)
-  setLiveAverage(avg)
-}
-
-const handleRevealComplete = () => {
-  setAverageFlipping(false)
-  setRevealStage('final')
-  celebrate()
-
-  if (!playedAudioRef.current) {
-    playedAudioRef.current = true
-    playScoreReaction(Math.round(songAvg))
+    const vals = Object.values(currentScores)
+    const sum = vals.reduce((a, b) => a + b, 0)
+    const avg = sum / (participants.length || 4)
+    setLiveAverage(avg)
   }
-}
+
+  const handleRevealComplete = () => {
+    setAverageFlipping(false)
+    setRevealStage('final')
+    celebrate()
+
+    if (!playedAudioRef.current) {
+      playedAudioRef.current = true
+      playScoreReaction(Math.round(songAvg))
+    }
+  }
 
   const handleAwardsComplete = () => {
     setAwardRevealComplete(true)
@@ -211,306 +240,314 @@ const handleRevealComplete = () => {
   const allJoined = participants.filter(p => p.claimed).length === 4
 
   return (
-    <div className="tv-layout">
-      {/* Header */}
-      <div className="tv-header">
-        <div>
-          <div className="h2" style={{ color: 'var(--gold)', marginBottom: 0 }}>{session.title}</div>
-          <div className="font-mono" style={{ opacity: 0.6 }}>{code}</div>
+    <div className="tv-layout" style={{ overflow: 'hidden' }}>
+      {/* ✅ The scaled “stage” */}
+      <div
+        style={{
+          width: DESIGN_W,
+          height: DESIGN_H,
+          transform: `scale(${scale})`,
+          transformOrigin: 'top left',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Header */}
+        <div className="tv-header">
+          <div>
+            <div className="h2" style={{ color: 'var(--gold)', marginBottom: 0 }}>{session.title}</div>
+            <div className="font-mono" style={{ opacity: 0.6 }}>{code}</div>
+          </div>
+          <div className="flex gap-sm">
+            <Link to={`/admin/${code}`} className="btn btn-ghost btn-sm">Admin</Link>
+            <Link to={`/results/${code}`} className="btn btn-ghost btn-sm">Results</Link>
+          </div>
         </div>
-        <div className="flex gap-sm">
-          <Link to={`/admin/${code}`} className="btn btn-ghost btn-sm">Admin</Link>
-          <Link to={`/results/${code}`} className="btn btn-ghost btn-sm">Results</Link>
-        </div>
-      </div>
 
-      {/* Main content */}
-      <div className="tv-content">
-        <AnimatePresence mode="wait">
-          {/* LOBBY STATE */}
-          {session.status === 'lobby' && (
-            <motion.div
-              key="lobby"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-center"
-            >
-              <div className="row" style={{ maxWidth: 1000, margin: '0 auto' }}>
-                {/* QR Code */}
-                <div className="col">
-                  <div className="card card-glow" style={{ padding: 32 }}>
-                    <div className="h2" style={{ marginBottom: 20 }}>Scan to Join</div>
-                    <div className="qr-container">
-                      <QRCodeCanvas
-                        value={joinUrl}
-                        size={200}
-                        fgColor="#D4AF37"
-                        bgColor="#0a0f0a"
-                        level="M"
-                      />
-                    </div>
-                    <div className="spacer" />
-                    <div className="font-mono" style={{ opacity: 0.7, fontSize: '0.875rem', wordBreak: 'break-all' }}>
-                      {joinUrl}
+        {/* Main content */}
+        <div className="tv-content">
+          <AnimatePresence mode="wait">
+            {/* LOBBY */}
+            {session.status === 'lobby' && (
+              <motion.div
+                key="lobby"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-center"
+              >
+                <div className="row" style={{ maxWidth: 1000, margin: '0 auto' }}>
+                  <div className="col">
+                    <div className="card card-glow" style={{ padding: 32 }}>
+                      <div className="h2" style={{ marginBottom: 20 }}>Scan to Join</div>
+                      <div className="qr-container">
+                        <QRCodeCanvas
+                          value={joinUrl}
+                          size={200}
+                          fgColor="#D4AF37"
+                          bgColor="#0a0f0a"
+                          level="M"
+                        />
+                      </div>
+                      <div className="spacer" />
+                      <div className="font-mono" style={{ opacity: 0.7, fontSize: '0.875rem', wordBreak: 'break-all' }}>
+                        {joinUrl}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Participants */}
-                <div className="col">
-                  <div className="card" style={{ padding: 32 }}>
-                    <div className="h2" style={{ marginBottom: 20 }}>
-                      Waiting for guests... ({participants.filter(p => p.claimed).length}/4)
-                    </div>
-                    <div className="grid-2" style={{ gap: 16 }}>
-                      {participants.map((p, idx) => (
-                        <motion.div
-                          key={p.participant_id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.1 }}
-                          className="card-inner"
-                          style={{ opacity: p.claimed ? 1 : 0.4 }}
-                        >
-                          <div className="flex items-center gap-md">
-                            <Avatar
-                              participantId={p.participant_id}
-                              name={p.name}
-                              avatarUrl={p.avatar_url}
-                              size="lg"
-                              glow={p.claimed}
-                            />
-                            <div>
-                              <div style={{ fontWeight: 700, fontSize: '1.25rem' }}>{p.name}</div>
-                              <div className={`pill ${p.claimed ? 'pill-success' : ''}`}>
-                                {p.claimed ? '✓ Joined' : 'Waiting...'}
+                  <div className="col">
+                    <div className="card" style={{ padding: 32 }}>
+                      <div className="h2" style={{ marginBottom: 20 }}>
+                        Waiting for guests... ({participants.filter(p => p.claimed).length}/4)
+                      </div>
+                      <div className="grid-2" style={{ gap: 16 }}>
+                        {participants.map((p, idx) => (
+                          <motion.div
+                            key={p.participant_id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.1 }}
+                            className="card-inner"
+                            style={{ opacity: p.claimed ? 1 : 0.4 }}
+                          >
+                            <div className="flex items-center gap-md">
+                              <Avatar
+                                participantId={p.participant_id}
+                                name={p.name}
+                                avatarUrl={p.avatar_url}
+                                size="lg"
+                                glow={p.claimed}
+                              />
+                              <div>
+                                <div style={{ fontWeight: 700, fontSize: '1.25rem' }}>{p.name}</div>
+                                <div className={`pill ${p.claimed ? 'pill-success' : ''}`}>
+                                  {p.claimed ? '✓ Joined' : 'Waiting...'}
+                                </div>
                               </div>
                             </div>
+                          </motion.div>
+                        ))}
+                      </div>
+
+                      {allJoined && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="text-center"
+                          style={{ marginTop: 24 }}
+                        >
+                          <div className="pill pill-success" style={{ fontSize: '1rem', padding: '12px 24px' }}>
+                            ✓ All joined! Admin can start the album
                           </div>
                         </motion.div>
-                      ))}
+                      )}
                     </div>
-
-                    {allJoined && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-center"
-                        style={{ marginTop: 24 }}
-                      >
-                        <div className="pill pill-success" style={{ fontSize: '1rem', padding: '12px 24px' }}>
-                          ✓ All joined! Admin can start the album
-                        </div>
-                      </motion.div>
-                    )}
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* IN-SONG STATE */}
-          {session.status === 'in_song' && (
-            <motion.div
-              key={`song-${session.song_index}`}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.05 }}
-              className="text-center"
-            >
-              <div className="pill" style={{ marginBottom: 24 }}>
-              Track {(session.song_index ?? 0) + 1} of {songs.length}
-              </div>
-
-              <motion.div
-                initial={{ y: 30, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="h1"
-                style={{ marginBottom: 48, maxWidth: 800, margin: '0 auto 48px' }}
-              >
-                {currentSong?.title ?? 'Loading...'}
               </motion.div>
+            )}
 
-              {/* Participant submission status */}
-              <div className="grid-4" style={{ maxWidth: 800, margin: '0 auto' }}>
-                {participants.map((p, idx) => {
-                  const hasSubmitted = songScores.some(s => s.participant_id === p.participant_id)
-                  return (
-                    <motion.div
-                      key={p.participant_id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 + idx * 0.1 }}
-                      className="card text-center"
-                      style={{ padding: 20 }}
-                    >
-                      <Avatar
-                        participantId={p.participant_id}
-                        name={p.name}
-                        avatarUrl={p.avatar_url}
-                        size="lg"
-                        glow={hasSubmitted}
-                      />
-                      <div className="spacer" />
-                      <div style={{ fontWeight: 700 }}>{p.name}</div>
-                      <div className="spacer" />
-                      <div className={`pill ${hasSubmitted ? 'pill-success' : 'pill-warning'}`}>
-                        {hasSubmitted ? '✓ Submitted' : '⏳ Waiting'}
-                      </div>
-                    </motion.div>
-                  )
-                })}
-              </div>
+            {/* IN-SONG */}
+            {session.status === 'in_song' && (
+              <motion.div
+                key={`song-${session.song_index}`}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.05 }}
+                className="text-center"
+              >
+                <div className="pill" style={{ marginBottom: 24 }}>
+                  Track {(session.song_index ?? 0) + 1} of {songs.length}
+                </div>
 
-              <div className="spacer-xl" />
-
-              <div className="pill" style={{ fontSize: '1rem', padding: '12px 24px' }}>
-                {submittedCount}/4 submitted
-                {submittedCount === 4 && ' — Admin can lock in!'}
-              </div>
-            </motion.div>
-          )}
-
-          {/* REVEALING STATE */}
-          {session.status === 'revealing' && (
-            <motion.div
-              key="revealing"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-center"
-            >
-              <div className="pill" style={{ marginBottom: 16 }}>
-              Track {(session.song_index ?? 0) + 1}
-              </div>
-
-              <div className="h1" style={{ marginBottom: 32 }}>
-                {currentSong?.title}
-              </div>
-
-              {revealStage === 'countdown' && (
                 <motion.div
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="h2"
-                  style={{ color: 'var(--gold)' }}
+                  initial={{ y: 30, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="h1"
+                  style={{ marginBottom: 48, maxWidth: 800, margin: '0 auto 48px' }}
                 >
-                  Scores locked in...
+                  {currentSong?.title ?? 'Loading...'}
                 </motion.div>
-              )}
 
-          {(revealStage === 'rising' || revealStage === 'final') && (
-            <>
-              <ScoreReveal
-                key={`reveal-${session.song_index}`} // safety reset
-                participants={participants}
-                scoreMap={scoreMap}
-                startReveal={revealStage === 'rising'}
-                onTick={handleTick}
-                onComplete={handleRevealComplete}
-              />
+                <div className="grid-4" style={{ maxWidth: 800, margin: '0 auto' }}>
+                  {participants.map((p, idx) => {
+                    const hasSubmitted = songScores.some(s => s.participant_id === p.participant_id)
+                    return (
+                      <motion.div
+                        key={p.participant_id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 + idx * 0.1 }}
+                        className="card text-center"
+                        style={{ padding: 20 }}
+                      >
+                        <Avatar
+                          participantId={p.participant_id}
+                          name={p.name}
+                          avatarUrl={p.avatar_url}
+                          size="lg"
+                          glow={hasSubmitted}
+                        />
+                        <div className="spacer" />
+                        <div style={{ fontWeight: 700 }}>{p.name}</div>
+                        <div className="spacer" />
+                        <div className={`pill ${hasSubmitted ? 'pill-success' : 'pill-warning'}`}>
+                          {hasSubmitted ? '✓ Submitted' : '⏳ Waiting'}
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </div>
 
-              <div className="spacer-xl" />
+                <div className="spacer-xl" />
 
-              <AverageFlip
-                value={averageFlipping ? liveAverage : songAvg}
-                isFlipping={averageFlipping}
-              />
-            </>
-          )}
+                <div className="pill" style={{ fontSize: '1rem', padding: '12px 24px' }}>
+                  {submittedCount}/4 submitted
+                  {submittedCount === 4 && ' — Admin can lock in!'}
+                </div>
+              </motion.div>
+            )}
 
-              {revealStage === 'final' && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                  style={{ marginTop: 32 }}
-                >
-                  <div className="pill" style={{ fontSize: '1rem', padding: '12px 24px' }}>
-                    Admin: Press "Next Song" to continue
-                  </div>
-                </motion.div>
-              )}
-            </motion.div>
-          )}
+            {/* REVEALING */}
+            {session.status === 'revealing' && (
+              <motion.div
+                key="revealing"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-center"
+              >
+                <div className="pill" style={{ marginBottom: 16 }}>
+                  Track {(session.song_index ?? 0) + 1}
+                </div>
 
-          {/* RESULTS STATE */}
-          {session.status === 'results' && (
-            <motion.div
-              key="results"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-center"
-            >
-              <div className="h1" style={{ color: 'var(--gold)', marginBottom: 24 }}>
-                All Songs Complete!
-              </div>
-              <div className="h2" style={{ marginBottom: 32 }}>
-                Ready for the final results?
-              </div>
-              <div className="pill" style={{ fontSize: '1rem', padding: '12px 24px' }}>
-                Admin: Press "Show Awards" to reveal
-              </div>
-            </motion.div>
-          )}
+                <div className="h1" style={{ marginBottom: 32 }}>
+                  {currentSong?.title}
+                </div>
 
-          {/* FINAL REVEAL STATE */}
-          {session.status === 'final_reveal' && (
-            <motion.div
-              key="final_reveal"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              {!awardRevealComplete ? (
-                <AwardReveal
-                  awards={awards}
-                  onComplete={handleAwardsComplete}
-                />
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="text-center"
-                >
-                  <div className="h1" style={{ color: 'var(--gold)', marginBottom: 24 }}>
-                    🎉 That's a wrap!
-                  </div>
-                  <div className="h2" style={{ marginBottom: 32 }}>
-                    {session.title}
-                  </div>
-                  <div className="pill" style={{ fontSize: '1rem', padding: '12px 24px' }}>
-                    Admin: Press "Complete Session" to finish
-                  </div>
-                </motion.div>
-              )}
-            </motion.div>
-          )}
+                {revealStage === 'countdown' && (
+                  <motion.div
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="h2"
+                    style={{ color: 'var(--gold)' }}
+                  >
+                    Scores locked in...
+                  </motion.div>
+                )}
 
-          {/* COMPLETE STATE */}
-          {session.status === 'complete' && (
-            <motion.div
-              key="complete"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="text-center"
-            >
-              <div className="h1" style={{ color: 'var(--gold)', marginBottom: 24 }}>
-                Thanks for listening!
-              </div>
-              <div className="h2" style={{ marginBottom: 32 }}>
-                {session.title}
-              </div>
-              <div className="spacer-xl" />
-              <Link to={`/results/${code}`} className="btn btn-primary btn-lg">
-                View Full Results
-              </Link>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                {(revealStage === 'rising' || revealStage === 'final') && (
+                  <>
+                    <ScoreReveal
+                      key={`reveal-${session.song_index}`}
+                      participants={participants}
+                      scoreMap={scoreMap}
+                      startReveal={revealStage === 'rising'}
+                      onTick={handleTick}
+                      onComplete={handleRevealComplete}
+                    />
+
+                    <div className="spacer-xl" />
+
+                    <AverageFlip
+                      value={averageFlipping ? liveAverage : songAvg}
+                      isFlipping={averageFlipping}
+                    />
+                  </>
+                )}
+
+                {revealStage === 'final' && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    style={{ marginTop: 32 }}
+                  >
+                    <div className="pill" style={{ fontSize: '1rem', padding: '12px 24px' }}>
+                      Admin: Press "Next Song" to continue
+                    </div>
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
+
+            {/* RESULTS */}
+            {session.status === 'results' && (
+              <motion.div
+                key="results"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-center"
+              >
+                <div className="h1" style={{ color: 'var(--gold)', marginBottom: 24 }}>
+                  All Songs Complete!
+                </div>
+                <div className="h2" style={{ marginBottom: 32 }}>
+                  Ready for the final results?
+                </div>
+                <div className="pill" style={{ fontSize: '1rem', padding: '12px 24px' }}>
+                  Admin: Press "Show Awards" to reveal
+                </div>
+              </motion.div>
+            )}
+
+            {/* FINAL REVEAL */}
+            {session.status === 'final_reveal' && (
+              <motion.div
+                key="final_reveal"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                {!awardRevealComplete ? (
+                  <AwardReveal
+                    awards={awards}
+                    onComplete={handleAwardsComplete}
+                  />
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="text-center"
+                  >
+                    <div className="h1" style={{ color: 'var(--gold)', marginBottom: 24 }}>
+                      🎉 That's a wrap!
+                    </div>
+                    <div className="h2" style={{ marginBottom: 32 }}>
+                      {session.title}
+                    </div>
+                    <div className="pill" style={{ fontSize: '1rem', padding: '12px 24px' }}>
+                      Admin: Press "Complete Session" to finish
+                    </div>
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
+
+            {/* COMPLETE */}
+            {session.status === 'complete' && (
+              <motion.div
+                key="complete"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center"
+              >
+                <div className="h1" style={{ color: 'var(--gold)', marginBottom: 24 }}>
+                  Thanks for listening!
+                </div>
+                <div className="h2" style={{ marginBottom: 32 }}>
+                  {session.title}
+                </div>
+                <div className="spacer-xl" />
+                <Link to={`/results/${code}`} className="btn btn-primary btn-lg">
+                  View Full Results
+                </Link>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   )
