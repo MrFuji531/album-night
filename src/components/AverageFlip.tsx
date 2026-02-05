@@ -30,22 +30,42 @@ export default function AverageFlip({ value, isFlipping }: AverageFlipProps) {
     }
   }, [isFlipping, value])
 
+  const getReaction = (score: number) => {
+    if (score >= 8) return '🔥 BANGER'
+    if (score >= 6) return '✨ SOLID'
+    if (score >= 4) return '😐 SHMEE SHMA'
+    return '❄️ TEEEEERRIBLE'
+  }
+
   return (
     <motion.div
       initial={{ scale: 0.8, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.2 }}
-      className="text-center"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 8
+      }}
     >
-      <div className="text-muted" style={{ marginBottom: 8, fontSize: '1.25rem' }}>
-        SONG AVERAGE
+      <div style={{ fontSize: '1rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+        Song Average
       </div>
 
       <motion.div
         animate={isFlipping ? { scale: [1, 1.02, 0.98, 1] } : {}}
         transition={{ duration: 0.15, repeat: isFlipping ? Infinity : 0 }}
-        className="score-display"
-        style={{ fontVariantNumeric: 'tabular-nums', minWidth: '3ch', display: 'inline-block' }}
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: 'clamp(4rem, 10vw, 6rem)',
+          lineHeight: 1,
+          color: 'var(--gold)',
+          textShadow: '0 0 40px rgba(212, 175, 55, 0.5)',
+          fontVariantNumeric: 'tabular-nums',
+          minWidth: '4ch',
+          textAlign: 'center'
+        }}
       >
         {displayValue.toFixed(2)}
       </motion.div>
@@ -56,9 +76,9 @@ export default function AverageFlip({ value, isFlipping }: AverageFlipProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className="pill"
-          style={{ marginTop: 16 }}
+          style={{ fontSize: '1rem', padding: '8px 16px' }}
         >
-          {value >= 8 ? '🔥 BANGER' : value >= 6 ? '✨ SOLID' : value >= 4 ? '😐 SHMEE SHMA' : '❄️ TEEEEERRIBLE'}
+          {getReaction(value)}
         </motion.div>
       )}
     </motion.div>

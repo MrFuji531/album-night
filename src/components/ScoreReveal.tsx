@@ -20,10 +20,28 @@ export default function ScoreReveal({
   onComplete
 }: ScoreRevealProps) {
   const maxScore = 10
-  const barMaxHeight = 320
   const TICK_DURATION = 500
 
-  // ✅ stable order (not score-based)
+  // Container ref to measure available height
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [barMaxHeight, setBarMaxHeight] = useState(280)
+
+  // Measure container and set bar height dynamically
+  useEffect(() => {
+    const measure = () => {
+      if (containerRef.current) {
+        const availableHeight = containerRef.current.clientHeight
+        // Leave room for avatar (80px) + name (30px) + margins (40px)
+        const barHeight = Math.max(150, Math.min(400, availableHeight - 150))
+        setBarMaxHeight(barHeight)
+      }
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
+
+  // Stable order (not score-based)
   const orderedParticipants = useMemo(() => {
     return [...participants].sort((a, b) =>
       String(a.participant_id).localeCompare(String(b.participant_id))
@@ -33,7 +51,7 @@ export default function ScoreReveal({
   const [currentScores, setCurrentScores] = useState<Record<string, number>>({})
   const hasStartedRef = useRef(false)
 
-  // ✅ store callbacks in refs so parent re-renders don't kill the interval
+  // Store callbacks in refs so parent re-renders don't kill the interval
   const onTickRef = useRef<ScoreRevealProps['onTick']>(onTick)
   const onCompleteRef = useRef<ScoreRevealProps['onComplete']>(onComplete)
 
@@ -45,7 +63,7 @@ export default function ScoreReveal({
     onCompleteRef.current = onComplete
   }, [onComplete])
 
-  // build a stable signature so we can reset on new song/scoreMap
+  // Build a stable signature so we can reset on new song/scoreMap
   const scoreSig = useMemo(() => {
     return orderedParticipants
       .map(p => `${p.participant_id}:${scoreMap[p.participant_id] ?? 0}`)
@@ -57,7 +75,7 @@ export default function ScoreReveal({
     return Math.max(0, ...vals)
   }, [orderedParticipants, scoreMap])
 
-  // ✅ reset when score set changes
+  // Reset when score set changes
   useEffect(() => {
     hasStartedRef.current = false
     const initial: Record<string, number> = {}
@@ -103,109 +121,105 @@ export default function ScoreReveal({
   }, [startReveal, orderedParticipants, scoreMap, highestScore])
 
   return (
-    <div className="w-full" style={{ maxWidth: 1000, margin: '0 auto' }}>
-      <div
-        style={{
-          display: 'flex',
-          gap: 24,
-          justifyContent: 'center',
-          alignItems: 'flex-end',
-          height: barMaxHeight + 140,
-          padding: '0 20px'
-        }}
-      >
-        {orderedParticipants.map((p) => {
-          const displayScore = currentScores[p.participant_id] ?? 0
-          const targetScore = scoreMap[p.participant_id] ?? 0
-          const isLocked = targetScore > 0 && displayScore >= targetScore
+    <div
+      ref={containerRef}
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+        gap: 32,
+        padding: '0 24px'
+      }}
+    >
+      {orderedParticipants.map((p) => {
+        const displayScore = currentScores[p.participant_id] ?? 0
+        const targetScore = scoreMap[p.participant_id] ?? 0
+        const isLocked = targetScore > 0 && displayScore >= targetScore
 
-          const barHeight = (displayScore / maxScore) * barMaxHeight
-          const color = getParticipantColor(p.participant_id)
+        const barHeight = (displayScore / maxScore) * barMaxHeight
+        const color = getParticipantColor(p.participant_id)
 
-          return (
+        return (
+          <div
+            key={p.participant_id}
+            style={{
+              flex: '1 1 0',
+              maxWidth: 220,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              height: '100%',
+              justifyContent: 'flex-end'
+            }}
+          >
+            {/* Bar container */}
             <div
-              key={p.participant_id}
               style={{
-                flex: 1,
-                maxWidth: 180,
+                width: '100%',
+                height: barMaxHeight,
+                background: 'rgba(255,255,255,0.05)',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--border-subtle)',
                 display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center'
+                alignItems: 'flex-end',
+                justifyContent: 'center',
+                padding: 8,
+                position: 'relative',
+                overflow: 'visible'
               }}
             >
-              <div
+              {/* The rising bar */}
+              <motion.div
+                initial={{ height: 0 }}
+                animate={{ height: barHeight }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
                 style={{
-                  width: '100%',
-                  height: barMaxHeight,
-                  background: 'rgba(255,255,255,0.05)',
-                  borderRadius: 'var(--radius-lg)',
-                  border: '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  alignItems: 'flex-end',
-                  justifyContent: 'center',
-                  padding: 8,
-                  position: 'relative',
-                  overflow: 'visible'
+                  width: '75%',
+                  background: `linear-gradient(180deg, ${color} 0%, ${color}88 100%)`,
+                  borderRadius: 'var(--radius-md)',
+                  boxShadow: `0 0 30px ${color}44`
+                }}
+              />
+
+              {/* Score number - floats above bar */}
+              <motion.div
+                animate={{ 
+                  bottom: Math.max(barHeight + 8, 8)
+                }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 'clamp(2rem, 4vw, 3rem)',
+                  color: 'white',
+                  textShadow: `0 0 20px ${color}`,
+                  zIndex: 10
                 }}
               >
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: barHeight }}
-                  transition={{ duration: 0.25, ease: 'easeOut' }}
-                  style={{
-                    width: '80%',
-                    background: `linear-gradient(180deg, ${color} 0%, ${color}88 100%)`,
-                    borderRadius: 'var(--radius-md)',
-                    boxShadow: `0 0 30px ${color}44`
-                  }}
-                />
+                {Math.round(displayScore)}
+              </motion.div>
+            </div>
 
-                {/* score always visible */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: Math.max(barMaxHeight - barHeight - 45, 6),
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '2.5rem',
-                    color: 'white',
-                    textShadow: `0 0 20px ${color}`,
-                    transition: 'top 0.25s ease-out'
-                  }}
-                >
-                  {Math.round(displayScore)}
-                </div>
-
-                {isLocked && (
-                  <div
-                    className="pill pill-success"
-                    style={{
-                      position: 'absolute',
-                      bottom: 10,
-                      fontSize: '0.9rem',
-                      padding: '6px 10px'
-                    }}
-                  >
-                    ✓ Locked
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginTop: 16, textAlign: 'center' }}>
-                <Avatar
-                  participantId={p.participant_id}
-                  name={p.name}
-                  avatarUrl={p.avatar_url}
-                  size="md"
-                  glow={isLocked}
-                />
-                <div style={{ marginTop: 8, fontWeight: 700, fontSize: '1rem' }}>
-                  {p.name}
-                </div>
+            {/* Avatar and name below bar */}
+            <div style={{ marginTop: 16, textAlign: 'center' }}>
+              <Avatar
+                participantId={p.participant_id}
+                name={p.name}
+                avatarUrl={p.avatar_url}
+                size="md"
+                glow={isLocked}
+              />
+              <div style={{ marginTop: 8, fontWeight: 700, fontSize: '1.1rem' }}>
+                {p.name}
               </div>
             </div>
-          )
-        })}
-      </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
