@@ -24,15 +24,15 @@ export default function ScoreReveal({
 
   // Container ref to measure available height
   const containerRef = useRef<HTMLDivElement>(null)
-  const [barMaxHeight, setBarMaxHeight] = useState(280)
+  const [barMaxHeight, setBarMaxHeight] = useState(250)
 
   // Measure container and set bar height dynamically
   useEffect(() => {
     const measure = () => {
       if (containerRef.current) {
         const availableHeight = containerRef.current.clientHeight
-        // Leave room for avatar (80px) + name (30px) + margins (40px)
-        const barHeight = Math.max(150, Math.min(400, availableHeight - 150))
+        // Leave room for avatar (70px) + name (25px) + score number floating above (50px) + margins
+        const barHeight = Math.max(120, Math.min(350, availableHeight - 180))
         setBarMaxHeight(barHeight)
       }
     }
@@ -129,8 +129,9 @@ export default function ScoreReveal({
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
-        gap: 32,
-        padding: '0 24px'
+        gap: 40,
+        padding: '0 32px',
+        paddingBottom: 16
       }}
     >
       {orderedParticipants.map((p) => {
@@ -145,16 +146,33 @@ export default function ScoreReveal({
           <div
             key={p.participant_id}
             style={{
-              flex: '1 1 0',
-              maxWidth: 220,
+              flex: '0 0 auto',
+              width: 180,
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
-              height: '100%',
-              justifyContent: 'flex-end'
+              alignItems: 'center'
             }}
           >
-            {/* Bar container */}
+            {/* Score number - positioned above the bar container */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '2.5rem',
+                color: 'white',
+                textShadow: `0 0 20px ${color}`,
+                marginBottom: 8,
+                height: 50,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {Math.round(displayScore)}
+            </motion.div>
+
+            {/* Bar container - fixed height, bar grows from bottom */}
             <div
               style={{
                 width: '100%',
@@ -166,8 +184,7 @@ export default function ScoreReveal({
                 alignItems: 'flex-end',
                 justifyContent: 'center',
                 padding: 8,
-                position: 'relative',
-                overflow: 'visible'
+                position: 'relative'
               }}
             >
               {/* The rising bar */}
@@ -176,32 +193,12 @@ export default function ScoreReveal({
                 animate={{ height: barHeight }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
                 style={{
-                  width: '75%',
+                  width: '70%',
                   background: `linear-gradient(180deg, ${color} 0%, ${color}88 100%)`,
                   borderRadius: 'var(--radius-md)',
                   boxShadow: `0 0 30px ${color}44`
                 }}
               />
-
-              {/* Score number - floats above bar */}
-              <motion.div
-                animate={{ 
-                  bottom: Math.max(barHeight + 8, 8)
-                }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
-                style={{
-                  position: 'absolute',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  fontFamily: 'var(--font-display)',
-                  fontSize: 'clamp(2rem, 4vw, 3rem)',
-                  color: 'white',
-                  textShadow: `0 0 20px ${color}`,
-                  zIndex: 10
-                }}
-              >
-                {Math.round(displayScore)}
-              </motion.div>
             </div>
 
             {/* Avatar and name below bar */}
@@ -213,7 +210,7 @@ export default function ScoreReveal({
                 size="md"
                 glow={isLocked}
               />
-              <div style={{ marginTop: 8, fontWeight: 700, fontSize: '1.1rem' }}>
+              <div style={{ marginTop: 8, fontWeight: 700, fontSize: '1rem' }}>
                 {p.name}
               </div>
             </div>
