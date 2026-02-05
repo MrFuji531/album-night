@@ -9,6 +9,26 @@ import Avatar from '../components/Avatar'
 import ResultsSummary from '../components/ResultsSummary'
 import type { ParticipantId } from '../types'
 
+// Personalized messages for each participant
+const PERSONAL_MESSAGES: Record<ParticipantId, { title: string; subtitle: string }> = {
+  james: {
+    title: "Oh hi you!",
+    subtitle: "This is past you ooooh"
+  },
+  lee: {
+    title: "Leezy Bleezy!",
+    subtitle: "Attempt at a nickname. Appreciate (❤️) you, can you hurry up and say it already (calm down) (oh also, download the link below)"
+  },
+  ben: {
+    title: "Oh! I didn't see you there",
+    subtitle: "*Reveals Fuzzy Bear Cock* (download the scorecard)"
+  },
+  steph: {
+    title: "تشرفت بمعرفتك يا حبيبتي",
+    subtitle: "لو سمحت نزّل اللينك اللي تحت"
+  }
+}
+
 export default function Play() {
   const { code = '' } = useParams()
   const { session, participants, songs, scores, loading } = useSessionData(code)
@@ -26,6 +46,12 @@ export default function Play() {
     if (!session || !participantId) return null
     return scores.find(s => s.song_index === session.song_index && s.participant_id === participantId) ?? null
   }, [scores, session, participantId])
+
+  // Get personalized message for this participant
+  const personalMessage = useMemo(() => {
+    if (!participantId) return PERSONAL_MESSAGES.james // fallback
+    return PERSONAL_MESSAGES[participantId] || PERSONAL_MESSAGES.james
+  }, [participantId])
 
   useEffect(() => {
     if (myExisting) {
@@ -151,11 +177,26 @@ export default function Play() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center"
         >
-          <div className="h1" style={{ color: 'var(--gold)', marginBottom: 16 }}>
-            Thanks for Playing!
+          <div 
+            className="h1" 
+            style={{ 
+              color: 'var(--gold)', 
+              marginBottom: 8,
+              // For Arabic text (Steph), add RTL direction
+              direction: participantId === 'steph' ? 'rtl' : 'ltr'
+            }}
+          >
+            {personalMessage.title}
           </div>
-          <div style={{ opacity: 0.8, marginBottom: 32 }}>
-            {session.title}
+          <div 
+            style={{ 
+              opacity: 0.8, 
+              marginBottom: 32, 
+              fontSize: '1.1rem',
+              direction: participantId === 'steph' ? 'rtl' : 'ltr'
+            }}
+          >
+            {personalMessage.subtitle}
           </div>
 
           <div className="card" style={{ padding: 32, marginBottom: 24 }}>
@@ -168,6 +209,7 @@ export default function Play() {
             />
             <div className="spacer" />
             <div className="h2">{me.name}</div>
+            <div style={{ opacity: 0.6, marginTop: 8 }}>{session.title}</div>
           </div>
 
           <button

@@ -217,7 +217,7 @@ export default function Tv() {
   const joinUrl = useMemo(() => {
     const base = import.meta.env.BASE_URL || './'
     const normalizedBase = base.startsWith('/') ? base : `/${base.replace(/^\.\//, '')}`
-    return `${window.location.origin}${normalizedBase}#/join/${code}`
+    return `${window.location.origin}${normalizedBase}/album-night/#/join/${code}`
   }, [code])
 
   /* ------------------ STATES ------------------ */
@@ -428,7 +428,7 @@ export default function Tv() {
 
               <div className="pill" style={{ fontSize: '1.25rem', padding: '14px 28px' }}>
                 {submittedCount}/4 submitted
-                {submittedCount === 4 && ' — Admin can lock in!'}
+                {submittedCount === 4 && ' — lock in baby!'}
               </div>
             </motion.div>
           )}

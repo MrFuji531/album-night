@@ -53,10 +53,10 @@ export default function AwardReveal({ awards, onComplete }: AwardRevealProps) {
         playAwardReaction('hater')
       } else if (award.id === 'highest') {
         goldShower()
-        playAwardReaction('stan') // Use stan sound for best song
+        playAwardReaction('highest') // Use stan sound for best song
       } else if (award.id === 'divisive') {
         celebrate()
-        playAwardReaction('hater') // Use hater sound for divisive
+        playAwardReaction('divisive') // Use hater sound for divisive
       } else {
         celebrate()
       }
