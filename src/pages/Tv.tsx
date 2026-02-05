@@ -26,12 +26,23 @@ export default function Tv() {
 
   const [revealStage, setRevealStage] = useState<RevealStage>('idle')
   const [awardRevealComplete, setAwardRevealComplete] = useState(false)
+  const awardSessionRef = useRef(0) // Tracks which "run" of awards we're on
 
   const [scale, setScale] = useState(1)
   const playedAudioRef = useRef(false)
 
   const [averageFlipping, setAverageFlipping] = useState(false)
   const [liveAverage, setLiveAverage] = useState(0)
+
+  /* ------------------ RESET STATE ON SESSION CHANGES ------------------ */
+  // Reset award state when session goes back to lobby (admin reset)
+  useEffect(() => {
+    if (session?.status === 'lobby') {
+      setAwardRevealComplete(false)
+      setRevealStage('idle')
+      awardSessionRef.current += 1 // Increment to force AwardReveal remount next time
+    }
+  }, [session?.status])
 
   /* ------------------ TV MODE ------------------ */
   useEffect(() => {
@@ -568,7 +579,11 @@ export default function Tv() {
                 >
                   {/* Awards take the FULL screen */}
                   <div style={{ flex: '1 1 auto', minHeight: 0, overflow: 'hidden' }}>
-                    <AwardReveal awards={awards} onComplete={handleAwardsComplete} />
+                    <AwardReveal 
+                      key={`awards-session-${awardSessionRef.current}`}
+                      awards={awards} 
+                      onComplete={handleAwardsComplete} 
+                    />
                   </div>
                 </div>
               ) : (
